@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="shortcut icon" href="../img/profile.jpg" type="image/x-icon">
+    <title>Tic Tac Toe</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Tic Tac Toe</h1>
+        <div id="tic-tac-toe-board">
+            <div class="row">
+                <div class="cell" onclick="makeMove(0, 0)"></div>
+                <div class="cell" onclick="makeMove(0, 1)"></div>
+                <div class="cell" onclick="makeMove(0, 2)"></div>
+            </div>
+            <div class="row">
+                <div class="cell" onclick="makeMove(1, 0)"></div>
+                <div class="cell" onclick="makeMove(1, 1)"></div>
+                <div class="cell" onclick="makeMove(1, 2)"></div>
+            </div>
+            <div class="row">
+                <div class="cell" onclick="makeMove(2, 0)"></div>
+                <div class="cell" onclick="makeMove(2, 1)"></div>
+                <div class="cell" onclick="makeMove(2, 2)"></div>
+            </div>
+        </div>
+        <div id="end-game-message" style="display: none;"></div> <!-- New div for end game messages -->
+        <div class="controls">
+            <button onclick="resetBoard()">Reset</button>
+            <div id="difficulty-display">Difficulty: easy</div>
+            <div class="difficulty-buttons">
+                <button id="easy-button" onclick="setDifficulty('easy')">Easy</button>
+                <button id="medium-button" onclick="setDifficulty('medium')">Medium</button>
+                <button id="hard-button" onclick="setDifficulty('hard')">Hard</button>
+                <button id="impossible-button" onclick="setDifficulty('impossible')">Impossible</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
