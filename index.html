@@ -1,45 +1,113 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <link rel="shortcut icon" href="../img/profile.jpg" type="image/x-icon">
-    <title>Tic Tac Toe</title>
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A premium, modern Tic-Tac-Toe game with multiple AI difficulties (Easy, Medium, Hard, Impossible), dynamic styling, scoreboard, and animations.">
+    <title>Tic Tac Toe — Beat the Unbeatable</title>
+    
+    <!-- Preconnect and Import modern Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Favicon link -->
     <link rel="icon" href="Assets/favicons/favicon.png" type="image/png" sizes="32x32">
+    
+    <!-- Application Stylesheet -->
+    <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 
 <body>
-    <div class="container">
-        <h1>Tic Tac Toe</h1>
-        <div id="tic-tac-toe-board">
-            <div class="row">
-                <div class="cell" onclick="makeMove(0, 0)"></div>
-                <div class="cell" onclick="makeMove(0, 1)"></div>
-                <div class="cell" onclick="makeMove(0, 2)"></div>
-            </div>
-            <div class="row">
-                <div class="cell" onclick="makeMove(1, 0)"></div>
-                <div class="cell" onclick="makeMove(1, 1)"></div>
-                <div class="cell" onclick="makeMove(1, 2)"></div>
-            </div>
-            <div class="row">
-                <div class="cell" onclick="makeMove(2, 0)"></div>
-                <div class="cell" onclick="makeMove(2, 1)"></div>
-                <div class="cell" onclick="makeMove(2, 2)"></div>
+    <!-- Background glowing decorative elements -->
+    <div class="glow-bg glow-cyan"></div>
+    <div class="glow-bg glow-magenta"></div>
+
+    <div class="app-container">
+        <header>
+            <h1>Tic Tac Toe</h1>
+            <p class="subtitle">Can you beat the unbeatable AI?</p>
+        </header>
+
+        <!-- Current turn display -->
+        <div class="status-container">
+            <div id="turn-indicator" class="turn-indicator">
+                <span class="player-label">Turn:</span>
+                <span id="active-player" class="player-x active-glow">Player X</span>
             </div>
         </div>
-        <div id="end-game-message" style="display: none;"></div> <!-- New div for end game messages -->
-        <div class="controls">
-            <button onclick="resetBoard()">Reset</button>
-            <div id="difficulty-display">Difficulty: easy</div>
-            <div class="difficulty-buttons">
-                <button id="easy-button" onclick="setDifficulty('easy')">Easy</button>
-                <button id="medium-button" onclick="setDifficulty('medium')">Medium</button>
-                <button id="hard-button" onclick="setDifficulty('hard')">Hard</button>
-                <button id="impossible-button" onclick="setDifficulty('impossible')">Impossible</button>
+
+        <!-- Interactive Scoreboard -->
+        <section class="scoreboard" aria-label="Game Scoreboard">
+            <div class="score-card player-x-card" id="score-card-x">
+                <span class="score-label">Player (X)</span>
+                <span id="score-player" class="score-value">0</span>
+            </div>
+            <div class="score-card draw-card" id="score-card-draw">
+                <span class="score-label">Ties</span>
+                <span id="score-draw" class="score-value">0</span>
+            </div>
+            <div class="score-card player-o-card" id="score-card-o">
+                <span class="score-label">AI (O)</span>
+                <span id="score-ai" class="score-value">0</span>
+            </div>
+        </section>
+
+        <!-- Game Arena / Interactive Board -->
+        <main class="game-arena">
+            <div id="tic-tac-toe-board" aria-label="Tic-Tac-Toe Board" role="grid">
+                <!-- Row 1 -->
+                <div class="row" role="row">
+                    <div class="cell" data-row="0" data-col="0" id="cell-0-0" role="button" tabindex="0" aria-label="Cell top left"></div>
+                    <div class="cell" data-row="0" data-col="1" id="cell-0-1" role="button" tabindex="0" aria-label="Cell top middle"></div>
+                    <div class="cell" data-row="0" data-col="2" id="cell-0-2" role="button" tabindex="0" aria-label="Cell top right"></div>
+                </div>
+                <!-- Row 2 -->
+                <div class="row" role="row">
+                    <div class="cell" data-row="1" data-col="0" id="cell-1-0" role="button" tabindex="0" aria-label="Cell middle left"></div>
+                    <div class="cell" data-row="1" data-col="1" id="cell-1-1" role="button" tabindex="0" aria-label="Cell center"></div>
+                    <div class="cell" data-row="1" data-col="2" id="cell-1-2" role="button" tabindex="0" aria-label="Cell middle right"></div>
+                </div>
+                <!-- Row 3 -->
+                <div class="row" role="row">
+                    <div class="cell" data-row="2" data-col="0" id="cell-2-0" role="button" tabindex="0" aria-label="Cell bottom left"></div>
+                    <div class="cell" data-row="2" data-col="1" id="cell-2-1" role="button" tabindex="0" aria-label="Cell bottom middle"></div>
+                    <div class="cell" data-row="2" data-col="2" id="cell-2-2" role="button" tabindex="0" aria-label="Cell bottom right"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Interactive Controls -->
+        <footer class="controls-panel">
+            <div class="difficulty-section">
+                <div id="difficulty-display" class="difficulty-display-title">Difficulty: easy</div>
+                <div class="difficulty-buttons" role="radiogroup" aria-label="Select AI Difficulty">
+                    <button id="easy-button" class="diff-btn active" data-difficulty="easy" role="radio" aria-checked="true">Easy</button>
+                    <button id="medium-button" class="diff-btn" data-difficulty="medium" role="radio" aria-checked="false">Medium</button>
+                    <button id="hard-button" class="diff-btn" data-difficulty="hard" role="radio" aria-checked="false">Hard</button>
+                    <button id="impossible-button" class="diff-btn" data-difficulty="impossible" role="radio" aria-checked="false">Impossible</button>
+                </div>
+            </div>
+            
+            <div class="actions">
+                <button id="reset-button" class="btn btn-primary" aria-label="Reset game score and board">Reset Game</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modern Game Over Modal Overlay -->
+    <div id="game-over-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
+        <div class="modal-content">
+            <div class="modal-glow"></div>
+            <h2 id="modal-title">Game Over</h2>
+            <div id="modal-result" class="modal-result">X Wins!</div>
+            <div class="modal-buttons">
+                <button id="play-again-button" class="btn btn-accent" aria-label="Play another round">Play Again</button>
             </div>
         </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 

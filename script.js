@@ -6,115 +6,346 @@ var board = [
 
 var currentPlayer = 'X';
 var difficulty = 'easy';
-var difficultyLocked = {
-    easy: false,
-    medium: false,
-    hard: false,
-    impossible: false
+var gameActive = true;
+var difficultyLocked = false;
+
+// Scoreboard stats
+var scores = {
+    x: 0,
+    o: 0,
+    draw: 0
 };
 
-// Function to detect if the site is being viewed on a mobile device
-function isMobileDevice() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
+// Cached DOM Elements
+var boardEl;
+var turnIndicatorEl;
+var scorePlayerEl;
+var scoreDrawEl;
+var scoreAiEl;
+var difficultyDisplayEl;
+var diffButtons;
+var resetButton;
+var playAgainButton;
+var gameOverModal;
+var modalTitle;
+var modalResult;
 
-function adjustSizeForMobile() {
-    if (isMobileDevice()) {
-        var container = document.querySelector('.container');
-        container.style.maxWidth = '80%'; // Adjust the container width
-        container.style.margin = '40% auto 0';
-
-        var cells = document.querySelectorAll('.cell');
-        cells.forEach(function(cell) {
-            cell.style.width = '150px'; // Adjust the cell width
-            cell.style.height = '150px'; // Adjust the cell height
-            cell.style.fontSize = '60px'; // Adjust the font size
-        });
-
-        var buttons = document.querySelectorAll('.controls button');
-        buttons.forEach(function(button) {
-            button.style.padding = '30px 60px'; // Adjust the button padding
-            button.style.fontSize = '40px'; // Adjust the button font size
-        });
-
-        var difficultyDisplay = document.getElementById('difficulty-display');
-        difficultyDisplay.style.fontFamily = 'Arial, sans-serif'; // Change the font
-        difficultyDisplay.style.fontSize = '45px'; // Adjust the font size
-    }
-}
-
-function adjustEndGameMessageSize() {
-    var endGameMessage = document.getElementById('end-game-message');
-    if (isMobileDevice()) {
-        // Adjust font size for mobile devices
-        endGameMessage.style.fontSize = '60px';
-    } else {
-        // Set default font size for non-mobile devices
-        endGameMessage.style.fontSize = '24px';
-    }
-}
-
-// Call the adjustSizeForMobile function when the page loads
+// Unified initialisation
 window.onload = function() {
-    adjustSizeForMobile();
+    boardEl = document.getElementById('tic-tac-toe-board');
+    turnIndicatorEl = document.getElementById('active-player');
+    scorePlayerEl = document.getElementById('score-player');
+    scoreDrawEl = document.getElementById('score-draw');
+    scoreAiEl = document.getElementById('score-ai');
+    difficultyDisplayEl = document.getElementById('difficulty-display');
+    diffButtons = document.querySelectorAll('.diff-btn');
+    resetButton = document.getElementById('reset-button');
+    playAgainButton = document.getElementById('play-again-button');
+    gameOverModal = document.getElementById('game-over-modal');
+    modalTitle = document.getElementById('modal-title');
+    modalResult = document.getElementById('modal-result');
+
+    loadScores();
+    setupEventListeners();
 };
+
+// Load scores from localStorage
+function loadScores() {
+    scores.x = parseInt(localStorage.getItem('ttt_score_x')) || 0;
+    scores.o = parseInt(localStorage.getItem('ttt_score_o')) || 0;
+    scores.draw = parseInt(localStorage.getItem('ttt_score_draw')) || 0;
+    updateScoreboardUI();
+}
+
+// Update scores in UI and localStorage
+function updateScore(winner) {
+    if (winner === 'X') {
+        scores.x++;
+        localStorage.setItem('ttt_score_x', scores.x);
+    } else if (winner === 'O') {
+        scores.o++;
+        localStorage.setItem('ttt_score_o', scores.o);
+    } else {
+        scores.draw++;
+        localStorage.setItem('ttt_score_draw', scores.draw);
+    }
+    updateScoreboardUI();
+}
+
+function updateScoreboardUI() {
+    if (scorePlayerEl) scorePlayerEl.textContent = scores.x;
+    if (scoreDrawEl) scoreDrawEl.textContent = scores.draw;
+    if (scoreAiEl) scoreAiEl.textContent = scores.o;
+}
+
+// Reset the entire score history
+function resetScores() {
+    scores = { x: 0, o: 0, draw: 0 };
+    localStorage.removeItem('ttt_score_x');
+    localStorage.removeItem('ttt_score_o');
+    localStorage.removeItem('ttt_score_draw');
+    updateScoreboardUI();
+}
+
+// Set up clean event bindings programmatically
+function setupEventListeners() {
+    // Cell bindings
+    var cells = document.querySelectorAll('.cell');
+    cells.forEach(function(cell) {
+        cell.addEventListener('click', function() {
+            var row = parseInt(cell.getAttribute('data-row'));
+            var col = parseInt(cell.getAttribute('data-col'));
+            handleCellClick(row, col);
+        });
+        
+        cell.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                var row = parseInt(cell.getAttribute('data-row'));
+                var col = parseInt(cell.getAttribute('data-col'));
+                handleCellClick(row, col);
+            }
+        });
+    });
+
+    // Difficulty buttons bindings
+    diffButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (!difficultyLocked) {
+                var diff = btn.getAttribute('data-difficulty');
+                setDifficulty(diff);
+            }
+        });
+    });
+
+    // Reset button binding
+    if (resetButton) {
+        resetButton.addEventListener('click', function() {
+            resetScores();
+            resetBoard();
+        });
+    }
+
+    // Play again button binding
+    if (playAgainButton) {
+        playAgainButton.addEventListener('click', function() {
+            resetBoard();
+            closeModal();
+        });
+    }
+}
+
+function setDifficulty(diff) {
+    difficulty = diff;
+    if (difficultyDisplayEl) {
+        difficultyDisplayEl.textContent = 'Difficulty: ' + difficulty;
+    }
+    
+    // Update active visual tabs
+    diffButtons.forEach(function(btn) {
+        if (btn.getAttribute('data-difficulty') === difficulty) {
+            btn.classList.add('active');
+            btn.setAttribute('aria-checked', 'true');
+        } else {
+            btn.classList.remove('active');
+            btn.setAttribute('aria-checked', 'false');
+        }
+    });
+}
+
+function lockDifficulty() {
+    difficultyLocked = true;
+    diffButtons.forEach(function(btn) {
+        if (!btn.classList.contains('active')) {
+            btn.style.opacity = '0.3';
+            btn.style.cursor = 'not-allowed';
+        }
+    });
+}
+
+function unlockDifficulty() {
+    difficultyLocked = false;
+    diffButtons.forEach(function(btn) {
+        btn.style.opacity = '';
+        btn.style.cursor = '';
+    });
+}
+
+function handleCellClick(row, col) {
+    if (!gameActive || board[row][col] !== '') return;
+
+    // Lock selection on the first move
+    if (!difficultyLocked) {
+        lockDifficulty();
+    }
+
+    makeMove(row, col);
+}
 
 function makeMove(row, col) {
     if (board[row][col] == '') {
         board[row][col] = currentPlayer;
-        document.getElementById('tic-tac-toe-board').children[row].children[col].innerHTML = currentPlayer;
+        
+        var cellElement = document.getElementById('cell-' + row + '-' + col);
+        if (cellElement) {
+            cellElement.textContent = currentPlayer;
+            cellElement.classList.add(currentPlayer === 'X' ? 'x-selected' : 'o-selected');
+        }
 
         var winner = checkWin();
         if (winner) {
-            displayEndGameMessage(winner + ' wins!');
+            handleGameEnd(winner);
             return;
         } else if (isBoardFull()) {
-            displayEndGameMessage('Draw!');
+            handleGameEnd('Draw');
             return;
-        }
-
-        if (!difficultyLocked[difficulty]) {
-            difficultyLocked[difficulty] = true; // Lock the difficulty once a move is made
-            hideDifficultyButtons(); // Hide difficulty buttons
         }
 
         if (currentPlayer == 'X') {
             currentPlayer = 'O';
-            document.getElementById('tic-tac-toe-board').style.pointerEvents = 'none';  // Disable board
-            setTimeout(makeAIMove, 100);  // AI's turn
+            updateTurnIndicator();
+            if (boardEl) boardEl.style.pointerEvents = 'none'; // Lock board during AI turn
+            setTimeout(makeAIMove, 450); // Natural visual delay
         } else {
             currentPlayer = 'X';
-            document.getElementById('tic-tac-toe-board').style.pointerEvents = 'auto';  // Enable board
+            updateTurnIndicator();
+            if (boardEl) boardEl.style.pointerEvents = 'auto';
         }
     }
 }
 
-function displayEndGameMessage(message) {
-    var endGameMessage = document.getElementById('end-game-message');
-    endGameMessage.innerHTML = message;
-    endGameMessage.style.display = 'block';
-    adjustEndGameMessageSize(); // Adjust size of end game message
-    // Hide end game message after 5 seconds
-    setTimeout(function() {
-        endGameMessage.style.display = 'none';
-        showDifficultyButtons(); // Show difficulty buttons after hiding end game message
-    }, 1500);
+function updateTurnIndicator() {
+    if (turnIndicatorEl) {
+        turnIndicatorEl.textContent = 'Player ' + currentPlayer;
+        if (currentPlayer === 'X') {
+            turnIndicatorEl.className = 'player-x active-glow';
+        } else {
+            turnIndicatorEl.className = 'player-o active-glow';
+        }
+    }
 }
 
-function hideEndGameMessage() {
-    var endGameMessage = document.getElementById('end-game-message');
-    endGameMessage.style.display = 'none';
-    showDifficultyButtons(); // Show difficulty buttons when end game message is hidden
+function handleGameEnd(winner) {
+    gameActive = false;
+    if (boardEl) boardEl.style.pointerEvents = 'none';
+
+    if (winner !== 'Draw') {
+        // Find and highlight the winning line combination
+        var combo = getWinningCombo();
+        if (combo) {
+            combo.forEach(function(coords) {
+                var cell = document.getElementById('cell-' + coords[0] + '-' + coords[1]);
+                if (cell) {
+                    cell.classList.add('win-highlight');
+                }
+            });
+        }
+
+        updateScore(winner);
+        setTimeout(function() {
+            showModal(winner === 'X' ? 'You Win!' : 'AI Wins!', winner);
+        }, 700);
+    } else {
+        updateScore('Draw');
+        setTimeout(function() {
+            showModal("It's a Tie!", 'Draw');
+        }, 700);
+    }
 }
 
-function hideDifficultyButtons() {
-    var buttons = document.getElementsByClassName('difficulty-buttons')[0];
-    buttons.style.display = 'none';
+function showModal(titleText, resultClass) {
+    if (modalTitle) modalTitle.textContent = titleText;
+    if (modalResult) {
+        modalResult.textContent = resultClass === 'Draw' ? 'Draw!' : resultClass + ' Wins';
+        modalResult.className = 'modal-result';
+        if (resultClass === 'X') {
+            modalResult.classList.add('x-win');
+        } else if (resultClass === 'O') {
+            modalResult.classList.add('o-win');
+        } else {
+            modalResult.classList.add('draw-win');
+        }
+    }
+    if (gameOverModal) {
+        gameOverModal.classList.add('show');
+        gameOverModal.setAttribute('aria-hidden', 'false');
+    }
 }
 
-function showDifficultyButtons() {
-    var buttons = document.getElementsByClassName('difficulty-buttons')[0];
-    buttons.style.display = 'block';
+function closeModal() {
+    if (gameOverModal) {
+        gameOverModal.classList.remove('show');
+        gameOverModal.setAttribute('aria-hidden', 'true');
+    }
+}
+
+function resetBoard() {
+    board = [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', '']
+    ];
+    currentPlayer = 'X';
+    gameActive = true;
+
+    var cells = document.querySelectorAll('.cell');
+    cells.forEach(function(cell) {
+        cell.textContent = '';
+        cell.className = 'cell';
+    });
+
+    unlockDifficulty();
+    updateTurnIndicator();
+    if (boardEl) boardEl.style.pointerEvents = 'auto';
+}
+
+function getWinningCombo() {
+    var lines = [
+        [[0, 0], [0, 1], [0, 2]],
+        [[1, 0], [1, 1], [1, 2]],
+        [[2, 0], [2, 1], [2, 2]],
+        [[0, 0], [1, 0], [2, 0]],
+        [[0, 1], [1, 1], [2, 1]],
+        [[0, 2], [1, 2], [2, 2]],
+        [[0, 0], [1, 1], [2, 2]],
+        [[0, 2], [1, 1], [2, 0]]
+    ];
+
+    for (var i = 0; i < lines.length; i++) {
+        var a = lines[i][0];
+        var b = lines[i][1];
+        var c = lines[i][2];
+        if (board[a[0]][a[1]] == board[b[0]][b[1]] && board[b[0]][b[1]] == board[c[0]][c[1]] && board[a[0]][a[1]] != '') {
+            return lines[i];
+        }
+    }
+    return null;
+}
+
+// AI ALGORITHMS
+function makeAIMove() {
+    switch (difficulty) {
+        case 'easy':
+            makeRandomMove();
+            break;
+        case 'medium':
+            if (!makeWinningMove() && !makeBlockingMove()) {
+                makeRandomMove();
+            }
+            break;
+        case 'hard':
+            if (!makeWinningMove() && !makeBlockingMove() && !makeSmartMove()) {
+                makeRandomMove();
+            }
+            break;
+        case 'impossible':
+            makeBestMove();
+            break;
+        default:
+            makeRandomMove();
+            break;
+    }
+    if (boardEl) boardEl.style.pointerEvents = 'auto';
 }
 
 function minimax(board, depth, isMaximizingPlayer) {
@@ -167,75 +398,14 @@ function makeBestMove() {
                 board[i][j] = '';
                 if (score > bestScore) {
                     bestScore = score;
-                    move = { i, j };
+                    move = { i: i, j: j };
                 }
             }
         }
     }
-    makeMove(move.i, move.j);
-}
-
-function setDifficulty(diff) {
-    if (!difficultyLocked[diff]) {
-        difficulty = diff;
-        document.getElementById('difficulty-display').innerText = 'Difficulty: ' + difficulty;
-
-        // Check if the game has ended
-        if (checkWin() || isBoardFull()) {
-            resetBoard(); // Reset the board if the game has ended
-        }
+    if (move) {
+        makeMove(move.i, move.j);
     }
-}
-
-function resetBoard() {
-    board = [
-        ['', '', ''],
-        ['', '', ''],
-        ['', '', '']
-    ];
-    currentPlayer = 'X';
-    var cells = document.getElementsByClassName('cell');
-    for (var i = 0; i < cells.length; i++) {
-        cells[i].innerHTML = '';
-    }
-
-    // Unlock all difficulty levels
-    difficultyLocked = {
-        easy: false,
-        medium: false,
-        hard: false,
-        impossible: false
-    };
-
-    showDifficultyButtons(); // Show difficulty buttons
-
-    var endGameMessage = document.getElementById('end-game-message');
-    endGameMessage.style.display = 'none'; // Hide end game message when reset
-}
-
-function makeAIMove() {
-    switch (difficulty) {
-        case 'easy':
-            makeRandomMove();
-            break;
-        case 'medium':
-            if (!makeWinningMove() && !makeBlockingMove()) {
-                makeRandomMove();
-            }
-            break;
-        case 'hard':
-            if (!makeWinningMove() && !makeBlockingMove() && !makeSmartMove()) {
-                makeRandomMove();
-            }
-            break;
-        case 'impossible':
-            makeBestMove();
-            break;
-        default:
-            makeRandomMove();
-            break;
-    }
-    document.getElementById('tic-tac-toe-board').style.pointerEvents = 'auto';  // Enable board
 }
 
 function makeWinningMove() {
@@ -274,13 +444,13 @@ function makeBlockingMove() {
 }
 
 function makeSmartMove() {
-    // Try to take the center if it's available
+    // Try center
     if (board[1][1] == '') {
         makeMove(1, 1);
         return true;
     }
 
-    // Try to take a corner if it's available
+    // Try corners
     var corners = [[0, 0], [0, 2], [2, 0], [2, 2]];
     for (var i = 0; i < corners.length; i++) {
         if (board[corners[i][0]][corners[i][1]] == '') {
@@ -301,8 +471,10 @@ function makeRandomMove() {
             }
         }
     }
-    var move = availableCells[Math.floor(Math.random() * availableCells.length)];
-    makeMove(move[0], move[1]);
+    if (availableCells.length > 0) {
+        var move = availableCells[Math.floor(Math.random() * availableCells.length)];
+        makeMove(move[0], move[1]);
+    }
 }
 
 function checkWin() {
@@ -320,7 +492,7 @@ function checkWin() {
     for (var i = 0; i < lines.length; i++) {
         if (lines[i][0] == lines[i][1] && lines[i][1] == lines[i][2] && lines[i][0] != '') {
             return lines[i][0];
-           }
+        }
     }
     return false;
 }
@@ -335,32 +507,3 @@ function isBoardFull() {
     }
     return true;
 }
-
-function setDifficulty(diff) {
-    if (!difficultyLocked[diff]) {
-        difficulty = diff;
-        document.getElementById('difficulty-display').innerText = 'Difficulty: ' + difficulty;
-
-        // Check if the game has ended
-        if (checkWin() || isBoardFull()) {
-            resetBoard(); // Reset the board if the game has ended
-        }
-    }
-}
-
-// Function to reset the board when the reset button is clicked
-document.getElementById('reset-button').addEventListener('click', function() {
-    resetBoard();
-});
-
-// Call the adjustEndGameMessageSize function when the page loads
-window.onload = function() {
-    adjustEndGameMessageSize();
-};
-
-// Call the adjustSizeForMobile function when the page loads
-window.onload = function() {
-    adjustSizeForMobile();
-};
-
-
